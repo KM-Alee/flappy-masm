@@ -65,9 +65,6 @@ debug_prefix_2      db "score ", 0
 debug_prefix_3      db "best ", 0
 debug_prefix_4      db "state ", 0
 
-; Sky palette (ANSI 256-color indices) - flat light blue throughout
-sky_palette         db 75, 75, 75, 75, 75, 75, 75, 75
-
 ; OS / terminal buffers
 saved_termios       db KTERM_SIZE dup (0)
 raw_termios         db KTERM_SIZE dup (0)

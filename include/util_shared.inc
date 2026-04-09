@@ -46,26 +46,22 @@ SaveBestScore endp
 
 PlaySwooshSound proc
     lea rdi, swoosh_sound_command
-    call PlaySoundCommand
-    ret
+    jmp PlaySoundCommand
 PlaySwooshSound endp
 
 PlayPointSound proc
     lea rdi, point_sound_command
-    call PlaySoundCommand
-    ret
+    jmp PlaySoundCommand
 PlayPointSound endp
 
 PlayHitSound proc
     lea rdi, hit_sound_command
-    call PlaySoundCommand
-    ret
+    jmp PlaySoundCommand
 PlayHitSound endp
 
 PlayDieSound proc
     lea rdi, die_sound_command
-    call PlaySoundCommand
-    ret
+    jmp PlaySoundCommand
 PlayDieSound endp
 
 ; WriteString - Write a null-terminated string to stdout
@@ -187,36 +183,3 @@ copy_string_loop:
     dec rdi
     ret
 CopyString endp
-
-; CopyStringInline - Copy string without advancing past the NUL
-CopyStringInline proc
-copy_string_inline_loop:
-    mov al, BYTE PTR [rsi]
-    inc rsi
-    test al, al
-    jz copy_string_inline_done
-    mov BYTE PTR [rdi], al
-    inc rdi
-    jmp copy_string_inline_loop
-copy_string_inline_done:
-    ret
-CopyStringInline endp
-
-; AppendNumberToBuffer - Format eax as decimal and append to rdi
-AppendNumberToBuffer proc uses rsi
-    push rdi
-    lea rdi, number_buffer
-    call UIntToString
-    pop rdi
-    lea rsi, number_buffer
-append_number_copy:
-    mov al, BYTE PTR [rsi]
-    inc rsi
-    test al, al
-    jz append_number_done
-    mov BYTE PTR [rdi], al
-    inc rdi
-    jmp append_number_copy
-append_number_done:
-    ret
-AppendNumberToBuffer endp

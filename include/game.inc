@@ -51,7 +51,6 @@ externdef debug_prefix_3:byte
 externdef debug_prefix_4:byte
 
 ; Color palette
-externdef sky_palette:byte
 
 ; OS / terminal buffers
 externdef saved_termios:byte
@@ -125,31 +124,9 @@ externdef RecomputeLayout:proc
 externdef UpdateGame:proc
 externdef ResetRun:proc
 externdef StartRun:proc
-externdef KillRun:proc
-externdef RandomGapRow:proc
-externdef RandomMod:proc
-externdef FindRightmostPipePx:proc
 
 ; render.asm
 externdef RenderFrame:proc
-externdef RenderBackground:proc
-externdef RenderGround:proc
-externdef RenderPipes:proc
-externdef RenderBird:proc
-externdef RenderHud:proc
-externdef RenderTitleOverlay:proc
-externdef RenderPauseOverlay:proc
-externdef RenderDeadOverlay:proc
-externdef RenderSizeWarning:proc
-externdef RenderDebugOverlay:proc
-externdef DrawPanel:proc
-externdef FillRect:proc
-externdef PutCell:proc
-externdef DrawTextAt:proc
-externdef DrawTextCentered:proc
-externdef GetSkyColorForRow:proc
-externdef EncodeAndPresent:proc
-externdef AppendColor256:proc
 
 ; util.asm
 externdef DetectDebugMode:proc
@@ -168,5 +145,3 @@ externdef AppendUnsignedToStream:proc
 externdef StringLength:proc
 externdef UIntToString:proc
 externdef CopyString:proc
-externdef CopyStringInline:proc
-externdef AppendNumberToBuffer:proc

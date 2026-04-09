@@ -12,11 +12,6 @@ include include/game.inc
 public UpdateGame
 public ResetRun
 public StartRun
-public KillRun
-public RandomGapRow
-public RandomPipeSpacing
-public RandomMod
-public FindRightmostPipePx
 
 .code
 

@@ -17,40 +17,30 @@ include include/config.inc
 include include/game.inc
 
 public RenderFrame
-public RenderBackground
-public RenderGround
-public RenderPipes
-public RenderBird
-public RenderHud
-public RenderTitleOverlay
-public RenderPauseOverlay
-public RenderDeadOverlay
-public RenderSizeWarning
-public RenderDebugOverlay
-public DrawPanel
-public FillRect
-public PutCell
-public DrawTextAt
-public DrawTextCentered
-public GetSkyColorForRow
-public EncodeAndPresent
-public AppendColor256
+
+CLOUD_COUNT         equ 6
+CLOUD_STRIDE        equ 24
+
+.data
+; Cloud table: shift, offset, wrap_extra, sub_offset, row, width
+cloud_data          dd 2, 0,  28, 16, 3,  11
+                    dd 3, 17, 34, 18, 8,  13
+                    dd 2, 40, 26, 15, 2,  10
+                    dd 4, 7,  32, 17, 11, 12
+                    dd 3, 51, 30, 16, 5,  12
+                    dd 5, 23, 36, 19, 13, 14
 
 .code
 
 ; FillSolidRect - Fill a rectangle with a solid ANSI color using space cells.
 ;   edi=x, esi=y, edx=width, ecx=height, r8d=color
-FillSolidRect proc uses r9
-    mov r9d, r8d
-    mov r8d, 32
-    mov eax, r9d
+FillSolidRect proc
+    mov eax, r8d
     shl eax, 8
+    or eax, 32
+    shl r8d, 16
     or r8d, eax
-    mov eax, r9d
-    shl eax, 16
-    or r8d, eax
-    call FillRect
-    ret
+    jmp FillRect
 FillSolidRect endp
 
 DrawCloud proc uses rbx r12 r13 r14
@@ -151,24 +141,15 @@ rf_no_debug:
 RenderFrame endp
 
 ; RenderBackground - Fill cell grid with blue sky and drifting clouds
-RenderBackground proc uses rbx rcx rdx r12
-    ; Fill each row with its sky gradient color (solid blue blocks)
-    xor r12d, r12d
-rbg_row_loop:
-    cmp r12d, DWORD PTR [term_rows]
-    jge rbg_clouds
-    mov esi, r12d
-    call GetSkyColorForRow
-    movzx r8d, al
-    mov edi, 0
-    mov esi, r12d
+RenderBackground proc uses rbx r12 r13
+    ; Fill entire screen with sky color
+    xor edi, edi
+    xor esi, esi
     mov edx, DWORD PTR [term_cols]
-    mov ecx, 1
+    mov ecx, DWORD PTR [term_rows]
+    mov r8d, 75
     call FillSolidRect
-    inc r12d
-    jmp rbg_row_loop
 
-rbg_clouds:
     ; === Sun: static golden block centered horizontally, rows 4-6 ===
     mov eax, DWORD PTR [term_cols]
     sar eax, 1                      ; center column
@@ -190,112 +171,54 @@ rbg_clouds:
     mov r8d, 226
     call FillSolidRect
 
-    ; Layered clouds with different rows, widths, and drift speeds
+    ; Layered clouds from data table
+    lea r12, cloud_data
+    xor r13d, r13d
+cloud_loop:
+    cmp r13d, CLOUD_COUNT
+    jge cloud_done
     mov eax, DWORD PTR [frame_counter]
-    sar eax, 2
+    mov ecx, DWORD PTR [r12]
+    sar eax, cl
+    add eax, DWORD PTR [r12 + 4]
     mov ebx, DWORD PTR [term_cols]
-    add ebx, 28
+    add ebx, DWORD PTR [r12 + 8]
     xor edx, edx
     div ebx
     mov edi, edx
-    sub edi, 16
-    mov esi, 3
-    mov edx, 11
+    sub edi, DWORD PTR [r12 + 12]
+    mov esi, DWORD PTR [r12 + 16]
+    mov edx, DWORD PTR [r12 + 20]
     call DrawCloud
-
-    mov eax, DWORD PTR [frame_counter]
-    sar eax, 3
-    add eax, 17
-    mov ebx, DWORD PTR [term_cols]
-    add ebx, 34
-    xor edx, edx
-    div ebx
-    mov edi, edx
-    sub edi, 18
-    mov esi, 8
-    mov edx, 13
-    call DrawCloud
-
-    mov eax, DWORD PTR [frame_counter]
-    sar eax, 2
-    add eax, 40
-    mov ebx, DWORD PTR [term_cols]
-    add ebx, 26
-    xor edx, edx
-    div ebx
-    mov edi, edx
-    sub edi, 15
-    mov esi, 2
-    mov edx, 10
-    call DrawCloud
-
-    mov eax, DWORD PTR [frame_counter]
-    sar eax, 4
-    add eax, 7
-    mov ebx, DWORD PTR [term_cols]
-    add ebx, 32
-    xor edx, edx
-    div ebx
-    mov edi, edx
-    sub edi, 17
-    mov esi, 11
-    mov edx, 12
-    call DrawCloud
-
-    mov eax, DWORD PTR [frame_counter]
-    sar eax, 3
-    add eax, 51
-    mov ebx, DWORD PTR [term_cols]
-    add ebx, 30
-    xor edx, edx
-    div ebx
-    mov edi, edx
-    sub edi, 16
-    mov esi, 5
-    mov edx, 12
-    call DrawCloud
-
-    mov eax, DWORD PTR [frame_counter]
-    sar eax, 5
-    add eax, 23
-    mov ebx, DWORD PTR [term_cols]
-    add ebx, 36
-    xor edx, edx
-    div ebx
-    mov edi, edx
-    sub edi, 19
-    mov esi, 13
-    mov edx, 14
-    call DrawCloud
+    add r12, CLOUD_STRIDE
+    inc r13d
+    jmp cloud_loop
+cloud_done:
     ret
 RenderBackground endp
 
 ; RenderGround - Solid-color ground: green grass top row, brown earth below
-RenderGround proc uses rbx r12
-    mov r12d, DWORD PTR [ground_top_row]
-rg_fill_loop:
-    cmp r12d, DWORD PTR [term_rows]
-    jge rg_done
-    cmp r12d, DWORD PTR [ground_top_row]
-    jne rg_earth
-
-    ; Grass row: bright green (color 34)
-    mov r8d, 34
-    jmp rg_fill
-
-rg_earth:
-    ; Earth rows: brown (color 130)
-    mov r8d, 130
-
-rg_fill:
-    mov edi, 0
-    mov esi, r12d
+RenderGround proc
+    ; Grass row (bright green)
+    xor edi, edi
+    mov esi, DWORD PTR [ground_top_row]
     mov edx, DWORD PTR [term_cols]
     mov ecx, 1
+    mov r8d, 34
     call FillSolidRect
-    inc r12d
-    jmp rg_fill_loop
 
+    ; Earth rows (brown)
+    xor edi, edi
+    mov esi, DWORD PTR [ground_top_row]
+    inc esi
+    mov eax, DWORD PTR [term_rows]
+    sub eax, DWORD PTR [ground_top_row]
+    dec eax
+    jle rg_done
+    mov ecx, eax
+    mov edx, DWORD PTR [term_cols]
+    mov r8d, 130
+    call FillSolidRect
 rg_done:
     ret
 RenderGround endp
@@ -508,11 +431,6 @@ RenderHud proc uses rbx r12
     mov eax, DWORD PTR [score_value]
     lea rdi, number_buffer
     call UIntToString
-
-    ; Use a contrasting background block behind the score for visibility
-    ; Get string length to know how wide the background needs to be
-    lea rdi, number_buffer
-    call StringLength
     mov r12d, eax                   ; r12 = score string length
 
     ; Draw a clean white score badge.
@@ -542,7 +460,7 @@ RenderHud proc uses rbx r12
     lea rsi, debug_prefix_3         ; "best "
     call CopyString
     mov eax, DWORD PTR [best_score]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], 0
 
     ; Draw at top-right corner with white background badge
@@ -683,7 +601,7 @@ RenderDeadOverlay proc uses r12
     lea rsi, score_label_s
     call CopyString
     mov eax, DWORD PTR [score_value]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], 0
     mov esi, r12d
     add esi, 5
@@ -697,7 +615,7 @@ RenderDeadOverlay proc uses r12
     lea rsi, best_label_s
     call CopyString
     mov eax, DWORD PTR [best_score]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], 0
     mov esi, r12d
     add esi, 7
@@ -761,29 +679,29 @@ RenderDebugOverlay proc
     lea rsi, debug_prefix_1
     call CopyString
     mov eax, DWORD PTR [term_cols]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], 'x'
     inc rdi
     mov eax, DWORD PTR [term_rows]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], ' '
     inc rdi
     lea rsi, debug_prefix_2
-    call CopyStringInline
+    call AppendString
     mov eax, DWORD PTR [score_value]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], ' '
     inc rdi
     lea rsi, debug_prefix_3
-    call CopyStringInline
+    call AppendString
     mov eax, DWORD PTR [best_score]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], ' '
     inc rdi
     lea rsi, debug_prefix_4
-    call CopyStringInline
+    call AppendString
     mov eax, DWORD PTR [game_state]
-    call AppendNumberToBuffer
+    call AppendUnsignedToStream
     mov BYTE PTR [rdi], 0
     mov eax, DWORD PTR [term_rows]
     dec eax
@@ -807,11 +725,6 @@ DrawPanel proc uses rbx r12 r13 r14 r15
     mov r13d, esi
     mov r14d, edx
     mov r15d, ecx
-
-    mov edi, r12d
-    mov esi, r13d
-    mov edx, r14d
-    mov ecx, r15d
     call FillSolidRect
 
     ; Inner fill area
@@ -959,23 +872,10 @@ put_done:
     ret
 PutCell endp
 
-; GetSkyColorForRow - Map a screen row to a sky palette color
+; GetSkyColorForRow - Return sky color for any row (flat blue)
 ;   esi=row -> returns ANSI color index in al
-GetSkyColorForRow proc uses rbx
-    mov eax, esi
-    imul eax, SKY_COLOR_COUNT
-    xor edx, edx
-    mov ebx, DWORD PTR [term_rows]
-    cmp ebx, 1
-    jg sky_div_ok
-    mov ebx, 1
-sky_div_ok:
-    div ebx
-    cmp eax, SKY_COLOR_COUNT - 1
-    jle sky_index_ok
-    mov eax, SKY_COLOR_COUNT - 1
-sky_index_ok:
-    movzx eax, BYTE PTR [sky_palette + rax]
+GetSkyColorForRow proc
+    mov al, 75
     ret
 GetSkyColorForRow endp
 

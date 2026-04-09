@@ -25,8 +25,6 @@ public AppendUnsignedToStream
 public StringLength
 public UIntToString
 public CopyString
-public CopyStringInline
-public AppendNumberToBuffer
 
 .code
 
@@ -89,8 +87,7 @@ SleepUntilNextTick endp
 ; PlaySoundCommand - Fire-and-forget shell command for a sound effect
 ;   rdi = command string
 PlaySoundCommand proc
-    call system
-    ret
+    jmp system
 PlaySoundCommand endp
 
 include include/util_shared.inc
