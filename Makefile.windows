@@ -1,0 +1,39 @@
+ASM ?= uasm
+CC := x86_64-w64-mingw32-gcc
+
+BUILD_DIR := build/windows
+TARGET := $(BUILD_DIR)/flappy-term.exe
+ASMFLAGS_uasm := -q -win64 -D TARGET_WINDOWS
+LDFLAGS := -Wl,--subsystem,console,--image-base,0x400000
+
+ifeq ($(MODE),debug)
+  CFLAGS := -g -O0
+else
+  CFLAGS := -O2
+endif
+
+SRCS := src/main.asm src/physics.asm src/render.asm src/input_win.asm \
+	src/terminal_win.asm src/gameplay.asm src/util_win.asm src/windows_crt.asm
+OBJS := $(patsubst src/%.asm,$(BUILD_DIR)/%.obj,$(SRCS))
+INCS := include/config.inc include/game.inc include/windows.inc
+
+.PHONY: all release debug clean
+
+all: release
+
+release:
+	@$(MAKE) -f Makefile.windows MODE=release $(TARGET)
+
+debug:
+	@$(MAKE) -f Makefile.windows MODE=debug $(TARGET)
+
+$(TARGET): $(OBJS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+
+$(BUILD_DIR)/%.obj: src/%.asm $(INCS)
+	@mkdir -p $(BUILD_DIR)
+	$(ASM) $(ASMFLAGS_uasm) -Fo=$@ $<
+
+clean:
+	rm -rf $(BUILD_DIR)
