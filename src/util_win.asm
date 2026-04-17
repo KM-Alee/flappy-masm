@@ -22,9 +22,6 @@ public AppendUnsignedToStream
 public StringLength
 public UIntToString
 public CopyString
-public CopyStringInline
-public AppendNumberToBuffer
-
 .code
 
 DetectDebugMode proc
